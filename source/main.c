@@ -17,8 +17,47 @@
 #include "timer.h"
 #include <stdlib.h>
 #include <time.h>
+#include "bit.h"
 #endif
 
+//Get keypad function
+unsigned char GetKeypadKey(){
+	
+	//check keys in column 1
+	PORTB = 0xEF;
+	asm("nop");
+	if (GetBit(PINB,0)==0){return('1');}
+	if (GetBit(PINB,1)==0){return('4');}
+	if (GetBit(PINB,2)==0){return('7');}
+	if (GetBit(PINB,3)==0){return('*');}
+
+	//check keys in column 2
+	PORTB = 0xDF;
+	asm("nop");
+	if (GetBit(PINB,0)==0){return('2');}
+        if (GetBit(PINB,1)==0){return('5');}
+        if (GetBit(PINB,2)==0){return('8');}
+        if (GetBit(PINB,3)==0){return('0');}
+
+	//check keys in column 3
+	PORTB = 0xBF;
+	asm("nop");
+	if (GetBit(PINB,0)==0){return('3');}
+        if (GetBit(PINB,1)==0){return('6');}
+        if (GetBit(PINB,2)==0){return('9');}
+        if (GetBit(PINB,3)==0){return('#');}
+
+	//check keys in column 4
+	PORTB = 0x7F;
+	asm("nop");
+	if (GetBit(PINB,0)==0){return('A');}
+        if (GetBit(PINB,1)==0){return('B');}
+        if (GetBit(PINB,2)==0){return('C');}
+        if (GetBit(PINB,3)==0){return('D');}
+
+	return ('\0'); //default value
+}
+//end of keypad function
 
 //task scheduler data structure
 typedef struct _task {
@@ -37,16 +76,32 @@ unsigned char matrix[5][8] = {	//view of matrix upside down
 	{1,0,0,0,0,1,0,1},
 	{1,0,0,0,0,0,0,1},
 	{0,0,0,0,0,0,0,0}};
+unsigned char menu[5][8] = {  //start screen menu
+        {0,0,0,0,0,1,0,0},
+        {0,0,1,0,1,1,1,0},
+        {0,0,0,0,0,0,0,0},
+        {0,1,1,0,1,1,1,0},
+        {0,0,0,0,0,1,0,0}};
 unsigned char inv = 0x00;
 unsigned int R = 2; //variable to keep track of row of the ball
 unsigned int C = 5; //variable to keep track of column of the ball
+unsigned char START = 0x00; //start command for all tasks
+unsigned char play = 0x01; //determines the number of players and is set to 1 player by default 
 //end of shared variables
 
 
 //start of first task to control play1 paddle
-enum PAD1_States {PAD1_mid, PAD1_up, PAD1_down};
+enum PAD1_States {PAD1_mid, PAD1_up, PAD1_down, PAD1_wait};
 int PAD1_Tick(int state) {
 	switch(state){ //state transitions for paddle 1
+		case PAD1_wait:
+			if(START == 1){
+				state = PAD1_mid;
+			}
+			else{
+				state = PAD1_wait;
+			}
+		break;
 
 		case PAD1_mid:
 			if(inv == 0x03){
@@ -86,7 +141,7 @@ int PAD1_Tick(int state) {
                                 state = PAD1_down;
                         }
 		break;
-		default: state = PAD1_mid; break;
+		default: state = PAD1_wait; break;
 
 	}
 	switch(state){ //state actions
@@ -115,6 +170,7 @@ int PAD1_Tick(int state) {
 			matrix[4][0] = 0x00;
 		break;
 
+		case PAD1_wait:
 		default:
 		break;
 	}
@@ -123,10 +179,19 @@ return state;
 //end of first task
 
 //start of ball task
-enum BAL_States{BAL_movE, BAL_movW, BAL_movNE, BAL_movSE, BAL_movNW, BAL_movSW, BAL_scoreP1, BAL_scoreP2};
+enum BAL_States{BAL_wait, BAL_movE, BAL_movW, BAL_movNE, BAL_movSE, BAL_movNW, BAL_movSW, BAL_scoreP1, BAL_scoreP2};
 
 int BAL_Tick(int state){
 	switch(state){//state transitions for ball task
+		case BAL_wait:
+			if(START == 1){
+				state = BAL_movE;
+			}
+			else{
+				state = BAL_wait;
+			}
+		break;
+		
 		case BAL_movE: 
 			if(inv == 0x03){ //reset command
                                 state = BAL_movE;
@@ -313,10 +378,9 @@ int BAL_Tick(int state){
                          R = 2;
                          C = 5;
                          matrix[R][C] = 1;
-
 		break;
 
-	default: state = BAL_movE; break;
+		default: state = BAL_wait; break;
 	}
 	switch(state){//state actions for ball task
 		case BAL_movE: //ball moving east
@@ -366,6 +430,7 @@ int BAL_Tick(int state){
 
 		break;
 		
+		case BAL_wait:
 		default:
 		break;		
 	}
@@ -376,9 +441,21 @@ return state;
 
 
 //start of third task to control p2 paddle or to set AI
-enum PAD2_States {PAD2_mid, PAD2_up, PAD2_down};
+enum PAD2_States {PAD2_wait, PAD2_mid, PAD2_mid2, PAD2_up, PAD2_up2, PAD2_down, PAD2_down2};
 int PAD2_Tick(int state) {
-        switch(state){ //state transitions for paddle 1
+        unsigned char x = GetKeypadKey();
+	switch(state){ //state transitions for paddle 1
+		case PAD2_wait:
+			if(START == 1 && play == 1){
+				state = PAD2_mid;
+			}
+			else if(START == 1 && play == 2){
+				state = PAD2_mid2;
+			}
+			else{
+				state = PAD2_wait;
+			}
+		break;
 
                 case PAD2_mid:
 			if(inv == 0x03){
@@ -397,6 +474,21 @@ int PAD2_Tick(int state) {
                         }
                 break;
 
+		case PAD2_mid2:
+                        if(inv == 0x03){
+                                state = PAD2_mid2;
+                        }
+                        else if(x == 'A'){
+                            state = PAD2_up2;
+                        }
+			else if(x == 'B'){
+				state = PAD2_down2;
+			}
+                        else{
+                                state = PAD2_mid2;
+                        }
+                break;
+
                 case PAD2_up:
 			if(inv == 0x03){
                                 state = PAD2_mid;
@@ -410,6 +502,19 @@ int PAD2_Tick(int state) {
                                 state = PAD2_up;
                         }
                 break;
+
+		case PAD2_up2:
+			if(inv == 0x03){
+                                state = PAD2_mid2;
+                        }
+                        else if(x == 'B'){
+                                state = PAD2_mid2;
+                        }
+                        else{
+                                state = PAD2_up2;
+                        }
+
+		break;
 
                 case PAD2_down:
 			if(inv == 0x03){
@@ -425,10 +530,23 @@ int PAD2_Tick(int state) {
                         }
                 break;
                 
-		default: state = PAD2_mid; break;
+		case PAD2_down2:
+			if(inv == 0x03){
+                                state = PAD2_mid2;
+                        }
+                        else if(x == 'A'){
+                            state = PAD2_mid2;
+                        }
+                        else{
+                                state = PAD2_down2;
+                        }
+		break;
+
+		default: state = PAD2_wait; break;
         }
 	switch(state){ //state actions
 
+		case PAD2_up2:
                 case PAD2_up:
                         matrix[0][7] = 0x01;
                         matrix[1][7] = 0x01;
@@ -437,6 +555,7 @@ int PAD2_Tick(int state) {
                         matrix[4][7] = 0x00;
                 break;
 
+		case PAD2_down2:
                 case PAD2_down:
                         matrix[0][7] = 0x00;
                         matrix[1][7] = 0x00;
@@ -445,6 +564,7 @@ int PAD2_Tick(int state) {
                         matrix[4][7] = 0x01;
                 break;
 
+		case PAD2_mid2:
                 case PAD2_mid:
                         matrix[0][7] = 0x00;
                         matrix[1][7] = 0x01;
@@ -453,9 +573,58 @@ int PAD2_Tick(int state) {
                         matrix[4][7] = 0x00;
                 break;
 
+		case PAD2_wait:
                 default:
                 break;
         }
+return state;
+}
+//end of paddle 2 task
+
+//start of setup task
+
+enum SET_States{SET_wait, SET_play1, SET_play2, SET_lock};
+
+int SET_Tick(int state){
+	switch(state){//state transitions for setup task
+		case SET_wait:
+			if(inv == 0x01){
+				state = SET_play1;
+			}
+			else if(inv == 0x02){
+				state = SET_play2;
+			}
+			else{
+				state = SET_wait;
+			}
+		break;
+
+		case SET_play1:
+		case SET_play2:
+		case SET_lock:
+			state = SET_lock;
+		break;
+
+		default: state = SET_wait; break;
+	}
+	switch(state){ //state actions for setup task
+		case SET_wait:
+		break;
+
+		case SET_play1:
+			START = 1;
+			play = 1;
+		break;
+
+		case SET_play2:
+			START = 1;
+			play = 2;
+		break;
+
+		case SET_lock:
+		default: 
+		break;
+	}
 return state;
 }
 
@@ -489,29 +658,59 @@ int LED_Tick(int state){
 	}
 	switch(state){//state actions
 		case LED_update1:
+			if(START == 0){
+			PORTD = 0x1E;
+                        PORTC = (menu[0][0]) | (menu[0][1] << 1) | (menu[0][2] << 2) | (menu[0][3] << 3) | (menu[0][4] << 4) | (menu[0][5] << 5) | (menu[0][6] << 6) | (menu[0][7] << 7);
+			}
+			else{	
 			PORTD = 0x1E;
 			PORTC = (matrix[0][0]) | (matrix[0][1] << 1) | (matrix[0][2] << 2) | (matrix[0][3] << 3) | (matrix[0][4] << 4) | (matrix[0][5] << 5) | (matrix[0][6] << 6) | (matrix[0][7] << 7);
+			}
 		break;
 
 		case LED_update2:
-                        PORTD = 0x1D;
+			if(START == 0){
+			PORTD = 0x1D; 
+                        PORTC = (menu[1][0]) | (menu[1][1] << 1) | (menu[1][2] << 2) | (menu[1][3] << 3) | (menu[1][4] << 4) | (menu[1][5] << 5) | (menu[1][6] << 6) | (menu[1][7] << 7);
+			}
+			else{
+			PORTD = 0x1D;
 			PORTC = (matrix[1][0]) | (matrix[1][1] << 1) | (matrix[1][2] << 2) | (matrix[1][3] << 3) | (matrix[1][4] << 4) | (matrix[1][5] << 5) | (matrix[1][6] << 6) | (matrix[1][7] << 7);
-                break;
+                	}
+		break;
 
 		case LED_update3:
-                        PORTD = 0x1B;
+                        if(START == 0){
+			PORTD = 0x1B;
+                        PORTC = (menu[2][0]) | (menu[2][1] << 1) | (menu[2][2] << 2) | (menu[2][3] << 3) | (menu[2][4] << 4) | (menu[2][5] << 5) | (menu[2][6] << 6) | (menu[2][7] << 7);
+			}
+			else{
+			PORTD = 0x1B;
 			PORTC = (matrix[2][0]) | (matrix[2][1] << 1) | (matrix[2][2] << 2) | (matrix[2][3] << 3) | (matrix[2][4] << 4) | (matrix[2][5] << 5) | (matrix[2][6] << 6) | (matrix[2][7] << 7);
-                break;
+                	}
+		break;
 
 		case LED_update4:
-                        PORTD = 0x17;
+			if(START == 0){
+			PORTD = 0x17;
+                        PORTC = (menu[3][0]) | (menu[3][1] << 1) | (menu[3][2] << 2) | (menu[3][3] << 3) | (menu[3][4] << 4) | (menu[3][5] << 5) | (menu[3][6] << 6) | (menu[3][7] << 7);
+			}
+			else{
+			PORTD = 0x17;
 			PORTC = (matrix[3][0]) | (matrix[3][1] << 1) | (matrix[3][2] << 2) | (matrix[3][3] << 3) | (matrix[3][4] << 4) | (matrix[3][5] << 5) | (matrix[3][6] << 6) | (matrix[3][7] << 7);
-                break;
+                	}
+		break;
 
 		case LED_update5:
-                        PORTD = 0x0F;
+			if(START == 0){
+			PORTD = 0x0F;
+                        PORTC = (menu[4][0]) | (menu[4][1] << 1) | (menu[4][2] << 2) | (menu[4][3] << 3) | (menu[4][4] << 4) | (menu[4][5] << 5) | (menu[4][6] << 6) | (menu[4][7] << 7);
+			}
+			else{
+			PORTD = 0x0F;
 			PORTC = (matrix[4][0]) | (matrix[4][1] << 1) | (matrix[4][2] << 2) | (matrix[4][3] << 3) | (matrix[4][4] << 4) | (matrix[4][5] << 5) | (matrix[4][6] << 6) | (matrix[4][7] << 7);
-                break;
+                	}
+		break;
 
 		default: break;
 	}
@@ -525,10 +724,11 @@ int main(void) {
 	DDRC = 0xFF; PORTC = 0x00;
 	DDRD = 0xFF; PORTD = 0x00;
 	DDRA = 0x00; PORTA = 0xFF;
+	DDRB = 0xF0; PORTB = 0x0F;
     /* Insert your solution below */
 
-	static task task1, task2, task3, task4;
-	task *tasks[] = {&task1, &task2, &task3, &task4};
+	static task task1, task2, task3, task4, task5;
+	task *tasks[] = {&task1, &task2, &task3, &task4, &task5};
 	const unsigned short numTasks = sizeof(tasks)/sizeof(task*);
 
 	const char start = -1;
@@ -555,6 +755,12 @@ int main(void) {
         task4.period = 1;
         task4.elapsedTime = task4.period;
         task4.TickFct = &LED_Tick;
+
+	//task5
+	task5.state = start;
+        task5.period = 100;
+        task5.elapsedTime = task5.period;
+        task5.TickFct = &SET_Tick;
 
 	TimerSet(1);
 	TimerOn();
