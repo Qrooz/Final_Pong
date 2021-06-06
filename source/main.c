@@ -3,13 +3,16 @@
  *	Lab Section: 22
  *	Assignment: Lab 11  Exercise 1
  *	Exercise Description: [optional - include for your own benefit]
- *      Create the arcade game of pong with the new component, the LED matrix
+ *      Create the arcade game of pong with the new component, the LED matrix, as well as making the game one or two player, and add a menu screen and scoreboard after each player scores
+ *
+ *	notes: sorry about my filming in the demo video, thumb is in the way a little because its hard to hold phone and operate the game at the same time. I only completed advancement 2 as well as the
+ *	basic requirementd
  *
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  *
- *	Demo Link: Youtube URL> 
+ *	Demo Link: Youtube URL> https://www.youtube.com/watch?v=3aSHm93o8co
  */
 #include <avr/io.h>
 #ifdef _SIMULATE_
@@ -82,11 +85,20 @@ unsigned char menu[5][8] = {  //start screen menu
         {0,0,0,0,0,0,0,0},
         {0,1,1,0,1,1,1,0},
         {0,0,0,0,0,1,0,0}};
+unsigned char board[5][8] = {  //score board
+        {0,0,0,0,0,0,0,0},
+        {0,0,0,0,0,0,0,0},
+        {0,0,0,0,0,0,0,0},
+        {0,0,0,0,0,0,0,0},
+        {0,0,0,0,0,0,0,0}};
 unsigned char inv = 0x00;
 unsigned int R = 2; //variable to keep track of row of the ball
 unsigned int C = 5; //variable to keep track of column of the ball
 unsigned char START = 0x00; //start command for all tasks
 unsigned char play = 0x01; //determines the number of players and is set to 1 player by default 
+unsigned char player1S = 0x00; //the score of player 1
+unsigned char player2S = 0x00; //the score of player 2
+unsigned char showS = 0x00; //flag to tell if score should be shown on the game board
 //end of shared variables
 
 
@@ -330,7 +342,7 @@ int BAL_Tick(int state){
                                 state = BAL_movSE;
                         }
 			else if((matrix[R-1][C+1] == 0) && (C+1 == 7)){
-                                state = BAL_scoreP2;
+                                state = BAL_scoreP1;
                         }
 		break;
 
@@ -357,8 +369,8 @@ int BAL_Tick(int state){
                         else if((matrix[R][C+1] == 1) && (matrix[R-1][C+1] == 1) && (matrix[R-2][C+1] == 1)){ //checks if ball hits bottom led of paddle
                                 state = BAL_movSE;
                         }
-                        else if((matrix[R+1][C-1] == 0) && (C-1 == 7)){
-                                state = BAL_scoreP2;
+                        else if((matrix[R+1][C+1] == 0) && (C+1 == 7)){
+                                state = BAL_scoreP1;
                         }
 		break;
 
@@ -369,6 +381,8 @@ int BAL_Tick(int state){
                         R = 2;
                         C = 5;
                         matrix[R][C] = 1;
+
+			showS = 0;
 		break;
 
 		case BAL_scoreP2:
@@ -378,6 +392,8 @@ int BAL_Tick(int state){
                          R = 2;
                          C = 5;
                          matrix[R][C] = 1;
+
+			 showS = 0;
 		break;
 
 		default: state = BAL_wait; break;
@@ -424,10 +440,42 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_scoreP1:
-
+			++player1S;
+			if(player1S == 1){
+				board[0][0] = 1;
+				showS = 1;
+			}
+			else if(player1S == 2){
+				board[1][0] = 1;
+				showS = 1;
+			}
+			else if(player1S == 3){
+				board[0][0] = 0;
+				board[1][0] = 0;
+				board[0][7] = 0;
+				board[1][7] = 0;
+				player1S = 0;
+				player2S = 0;
+			}
 		break;
 		case BAL_scoreP2: 
-
+			++player2S;
+			if(player2S == 1){
+                                board[0][7] = 1;
+				showS = 1;
+                        }
+                        else if(player2S == 2){
+                                board[1][7] = 1;
+				showS = 1;
+                        }
+                        else if(player2S == 3){
+                                board[0][0] = 0;
+                                board[1][0] = 0;
+                                board[0][7] = 0;
+                                board[1][7] = 0;
+                                player2S = 0;
+				player1S = 0;
+                        }
 		break;
 		
 		case BAL_wait:
@@ -662,6 +710,10 @@ int LED_Tick(int state){
 			PORTD = 0x1E;
                         PORTC = (menu[0][0]) | (menu[0][1] << 1) | (menu[0][2] << 2) | (menu[0][3] << 3) | (menu[0][4] << 4) | (menu[0][5] << 5) | (menu[0][6] << 6) | (menu[0][7] << 7);
 			}
+			else if(showS == 1){
+			PORTD = 0x1E;
+                        PORTC = (board[0][0]) | (board[0][1] << 1) | (board[0][2] << 2) | (board[0][3] << 3) | (board[0][4] << 4) | (board[0][5] << 5) | (board[0][6] << 6) | (board[0][7] << 7);
+			}
 			else{	
 			PORTD = 0x1E;
 			PORTC = (matrix[0][0]) | (matrix[0][1] << 1) | (matrix[0][2] << 2) | (matrix[0][3] << 3) | (matrix[0][4] << 4) | (matrix[0][5] << 5) | (matrix[0][6] << 6) | (matrix[0][7] << 7);
@@ -672,6 +724,10 @@ int LED_Tick(int state){
 			if(START == 0){
 			PORTD = 0x1D; 
                         PORTC = (menu[1][0]) | (menu[1][1] << 1) | (menu[1][2] << 2) | (menu[1][3] << 3) | (menu[1][4] << 4) | (menu[1][5] << 5) | (menu[1][6] << 6) | (menu[1][7] << 7);
+			}
+			else if(showS == 1){
+			PORTD = 0x1D;
+                        PORTC = (board[1][0]) | (board[1][1] << 1) | (board[1][2] << 2) | (board[1][3] << 3) | (board[1][4] << 4) | (board[1][5] << 5) | (board[1][6] << 6) | (board[1][7] << 7);
 			}
 			else{
 			PORTD = 0x1D;
@@ -684,6 +740,10 @@ int LED_Tick(int state){
 			PORTD = 0x1B;
                         PORTC = (menu[2][0]) | (menu[2][1] << 1) | (menu[2][2] << 2) | (menu[2][3] << 3) | (menu[2][4] << 4) | (menu[2][5] << 5) | (menu[2][6] << 6) | (menu[2][7] << 7);
 			}
+			else if(showS == 1){
+			PORTD = 0x1B;
+                        PORTC = (board[2][0]) | (board[2][1] << 1) | (board[2][2] << 2) | (board[2][3] << 3) | (board[2][4] << 4) | (board[2][5] << 5) | (board[2][6] << 6) | (board[2][7] << 7);	
+			}
 			else{
 			PORTD = 0x1B;
 			PORTC = (matrix[2][0]) | (matrix[2][1] << 1) | (matrix[2][2] << 2) | (matrix[2][3] << 3) | (matrix[2][4] << 4) | (matrix[2][5] << 5) | (matrix[2][6] << 6) | (matrix[2][7] << 7);
@@ -695,6 +755,10 @@ int LED_Tick(int state){
 			PORTD = 0x17;
                         PORTC = (menu[3][0]) | (menu[3][1] << 1) | (menu[3][2] << 2) | (menu[3][3] << 3) | (menu[3][4] << 4) | (menu[3][5] << 5) | (menu[3][6] << 6) | (menu[3][7] << 7);
 			}
+			else if(showS == 1){
+			PORTD = 0x17;
+                        PORTC = (board[3][0]) | (board[3][1] << 1) | (board[3][2] << 2) | (board[3][3] << 3) | (board[3][4] << 4) | (board[3][5] << 5) | (board[3][6] << 6) | (board[3][7] << 7);
+			}
 			else{
 			PORTD = 0x17;
 			PORTC = (matrix[3][0]) | (matrix[3][1] << 1) | (matrix[3][2] << 2) | (matrix[3][3] << 3) | (matrix[3][4] << 4) | (matrix[3][5] << 5) | (matrix[3][6] << 6) | (matrix[3][7] << 7);
@@ -705,6 +769,10 @@ int LED_Tick(int state){
 			if(START == 0){
 			PORTD = 0x0F;
                         PORTC = (menu[4][0]) | (menu[4][1] << 1) | (menu[4][2] << 2) | (menu[4][3] << 3) | (menu[4][4] << 4) | (menu[4][5] << 5) | (menu[4][6] << 6) | (menu[4][7] << 7);
+			}
+			else if(showS == 1){
+			PORTD = 0x0F;
+                        PORTC = (board[4][0]) | (board[4][1] << 1) | (board[4][2] << 2) | (board[4][3] << 3) | (board[4][4] << 4) | (board[4][5] << 5) | (board[4][6] << 6) | (board[4][7] << 7);
 			}
 			else{
 			PORTD = 0x0F;
