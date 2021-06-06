@@ -49,7 +49,10 @@ int PAD1_Tick(int state) {
 	switch(state){ //state transitions for paddle 1
 
 		case PAD1_mid:
-			if(inv == 0x01){
+			if(inv == 0x03){
+				state = PAD1_mid;
+			}
+			else if(inv == 0x01){
 				state = PAD1_up;
 			}
 			else if(inv == 0x02){
@@ -61,7 +64,10 @@ int PAD1_Tick(int state) {
 		break;
 
 		case PAD1_up:
-			if(inv == 0x02){
+			if(inv == 0x03){
+                                state = PAD1_mid;
+                        }
+			else if(inv == 0x02){
 				state = PAD1_mid;
 			}
 			else{
@@ -70,7 +76,10 @@ int PAD1_Tick(int state) {
 		break;
 
 		case PAD1_down:
-			if(inv == 0x01){
+			if(inv == 0x03){
+                                state = PAD1_mid;
+                        }
+			else if(inv == 0x01){
                                 state = PAD1_mid;
                         }
                         else{
@@ -119,7 +128,14 @@ enum BAL_States{BAL_movE, BAL_movW, BAL_movNE, BAL_movSE, BAL_movNW, BAL_movSW, 
 int BAL_Tick(int state){
 	switch(state){//state transitions for ball task
 		case BAL_movE: 
-			if((matrix[R][C-1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with the paddle when parallel to the top of display
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+				matrix[R][C] = 0;
+				R = 2;
+				C = 5;
+				matrix[R][C] = 1;
+                        }
+			else if((matrix[R][C-1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with the paddle when parallel to the top of display
 				state = BAL_movSW;
 			}
 			else if((matrix[R][C-1] == 1) && (R+1==5)){ //checks if ball comes in contact with the paddle when parallel to the bottom of display
@@ -140,7 +156,14 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_movNE:
-			if((matrix[R][C-1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with top of paddle and ceiling
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+                                matrix[R][C] = 0;
+                                R = 2;
+                                C = 5;
+                                matrix[R][C] = 1;
+                        }
+			else if((matrix[R][C-1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with top of paddle and ceiling
                                 state = BAL_movSW;
                         }
 			else if(R-1 == -1){ //checks if ball hits ceiling
@@ -161,7 +184,14 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_movSE:
-			if(matrix[R][C-1] == 1 && (R+1 == 5)){ //checks if ball comes in contact with bottom of paddle and floor
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+                                matrix[R][C] = 0;
+                                R = 2;
+                                C = 5;
+                                matrix[R][C] = 1;
+                        }
+			else if(matrix[R][C-1] == 1 && (R+1 == 5)){ //checks if ball comes in contact with bottom of paddle and floor
 				state = BAL_movNW;
 			}
 			else if(R+1 == 5){ //check if ball hits the floor
@@ -183,7 +213,14 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_movW:
-			if((matrix[R][C+1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with the paddle when parallel to the top of display
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+                                matrix[R][C] = 0;
+                                R = 2;
+                                C = 5;
+                                matrix[R][C] = 1;
+                        }
+			else if((matrix[R][C+1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with the paddle when parallel to the top of display
                                 state = BAL_movSE;
                         }
                         else if((matrix[R][C+1] == 1) && (R+1 == 5)){ //checks if ball comes in contact with the paddle when parallel to the bottom of display
@@ -205,7 +242,14 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_movNW:
-			if((matrix[R][C+1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with top of paddle and ceiling
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+                                matrix[R][C] = 0;
+                                R = 2;
+                                C = 5;
+                                matrix[R][C] = 1;
+                        }
+			else if((matrix[R][C+1] == 1) && (R-1 == -1)){ //checks if ball comes in contact with top of paddle and ceiling
                                 state = BAL_movSE;
                         }
                         else if(R-1 == -1){ //checks if ball hits ceiling
@@ -226,7 +270,14 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_movSW:
-			if(matrix[R][C+1] == 1 && (R+1 == 5)){ //checks if ball comes in contact with bottom of paddle and floor
+			if(inv == 0x03){ //reset command
+                                state = BAL_movE;
+                                matrix[R][C] = 0;
+                                R = 2;
+                                C = 5;
+                                matrix[R][C] = 1;
+                        }
+			else if(matrix[R][C+1] == 1 && (R+1 == 5)){ //checks if ball comes in contact with bottom of paddle and floor
                                 state = BAL_movNE;
                         }
                         else if(R+1 == 5){ //check if ball hits the floor
@@ -244,14 +295,24 @@ int BAL_Tick(int state){
                         else if((matrix[R+1][C-1] == 0) && (C-1 == 7)){
                                 state = BAL_scoreP2;
                         }
-
 		break;
 
 		case BAL_scoreP1:
-
+			//reset command
+                        state = BAL_movE;
+                        matrix[R][C] = 0;
+                        R = 2;
+                        C = 5;
+                        matrix[R][C] = 1;
 		break;
 
 		case BAL_scoreP2:
+			 //reset command
+                         state = BAL_movE;
+                         matrix[R][C] = 0;
+                         R = 2;
+                         C = 5;
+                         matrix[R][C] = 1;
 
 		break;
 
@@ -299,7 +360,12 @@ int BAL_Tick(int state){
 		break;
 
 		case BAL_scoreP1:
+
+		break;
 		case BAL_scoreP2: 
+
+		break;
+		
 		default:
 		break;		
 	}
@@ -315,7 +381,10 @@ int PAD2_Tick(int state) {
         switch(state){ //state transitions for paddle 1
 
                 case PAD2_mid:
-                        if((rand() % 2) == 1){
+			if(inv == 0x03){
+                                state = PAD2_mid;
+                        }
+			else if((rand() % 2) == 1){
                                 if(R > 2){
 					state = PAD2_down;
 				}
@@ -329,7 +398,10 @@ int PAD2_Tick(int state) {
                 break;
 
                 case PAD2_up:
-                        if((rand()%2) == 1){
+			if(inv == 0x03){
+                                state = PAD2_mid;
+                        }
+			else if((rand()%2) == 1){
                                 if(R > 2){
 					state = PAD2_mid;
 				}
@@ -340,7 +412,10 @@ int PAD2_Tick(int state) {
                 break;
 
                 case PAD2_down:
-                        if((rand()%2) == 1){
+			if(inv == 0x03){
+                                state = PAD2_mid;
+                        }
+			else if((rand()%2) == 1){
                         	if(R < 2){
 				state = PAD2_mid;
 				}
